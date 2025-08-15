@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent scrollbars due to canvas */
+        }
+
+        /* Full-screen canvas for fireworks */
+        #fireworksCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5; /* Behind all content */
+        }
+
+        /* Full-screen canvas for confetti - placed above everything */
+        #confettiCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100; /* Above message box and other content */
+            pointer-events: none; /* Allows clicks to pass through to elements below */
+        }
+
+        /* Initial screen styling */
+        #initial-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); /* Warm gradient */
+            transition: opacity 1s ease-in-out;
+            position: relative;
+            z-index: 50;
+        }
+
+        /* Birthday message screen styling */
+        #birthday-message-screen {
+            display: none; /* Hidden initially */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* background-color: #000000; Solid black background */
+            transition: opacity 1s ease-in-out;
+            position: relative;
+            z-index: 15; /* Message screen itself is above fireworks canvas */
+        }
+
+        /* Message box styling */
+        .message-box {
+            background-color: rgba(255, 255, 255, 0.95); /* Slightly less transparent */
+            padding: 2.5rem;
+            border-radius: 2rem;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5); /* Stronger shadow for black background */
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.7) translateY(50px); /* Start smaller and lower */
+            animation: bounceIn 1s forwards ease-out; /* Main entry animation */
+            max-width: 90%;
+            position: relative;
+            z-index: 10; /* Above fireworks, but below confetti */
+            overflow: hidden; /* Ensure text doesn't overflow during animation */
+        }
+
+        /* Keyframes for message box entry */
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.7) translateY(50px);
+            }
+            60% {
+                opacity: 1;
+                transform: scale(1.05) translateY(-10px); /* Slight overshoot */
+            }
+            80% {
+                transform: scale(0.98) translateY(5px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* Keyframes for text elements inside message box */
+        @keyframes slideInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-box h1 {
+            font-size: 4rem;
+            color: #ff6f61; /* Vibrant color */
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            font-weight: 700;
+            opacity: 0; /* Hidden initially for animation */
+            transform: translateY(20px);
+            animation: slideInUp 0.8s forwards ease-out 0.5s; /* Staggered animation */
+        }
+
+        .message-box p {
+            font-size: 1.5rem;
+            color: #333;
+            line-height: 1.6;
+            opacity: 0; /* Hidden initially for animation */
+            transform: translateY(20px);
+            animation: slideInUp 0.8s forwards ease-out 0.8s; /* Staggered animation */
+        }
+
+        .message-box p:nth-of-type(2) { /* "With all my love," paragraph */
+            animation-delay: 1.1s;
+        }
+
+        .message-box p:nth-of-type(3) { /* "Your [Your Name Here]" paragraph */
+            animation-delay: 1.4s;
+        }
+
+
+        /* Button styling */
+        .magic-button {
+            padding: 1.5rem 3rem;
+            font-size: 1.75rem;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 9999px; /* Fully rounded */
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+            z-index: 2; /* Above initial background */
+        }
+
+        .magic-button:hover {
+            transform: translateY(-0.25rem) scale(1.05);
+            box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.3);
+        }
+
+        .magic-button:active {
+            transform: translateY(0.05rem) scale(0.98);
+            box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .magic-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease-out, height 0.4s ease-out;
+            z-index: -1;
+        }
+
+        .magic-button:hover::before {
+            width: 300%;
+            height: 300%;
+        }
+
+
+        @media (max-width: 768px) {
+            .magic-button {
+                padding: 1rem 2rem;
+                font-size: 1.25rem;
+            }
+            .message-box h1 {
+                font-size: 2.5rem;
+            }
+            .message-box p {
+                font-size: 1.1rem;
+            }
+            .message-box {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+    <!-- Canvas for fireworks (behind everything) -->
+    <canvas id="fireworksCanvas"></canvas>
+
+    <!-- Canvas for confetti (on top of everything) -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Initial Screen -->
+    <div id="initial-screen">
+        <button id="wishButton" class="magic-button">
+            Click for a Birthday Wish!
+        </button>
+    </div>
+
+    <!-- Birthday Message Screen (Initially hidden) -->
+    <div id="birthday-message-screen" class="hidden">
+        <div class="message-box">
+            <h1 class="text-gradient">Happy Birthday, My Love!</h1>
+            <p>Wishing you a day filled with joy, laughter, and all the wonderful things you deserve. May your special day be as amazing as you are!</p>
+            <p class="mt-4 text-sm text-gray-600">With all my love,</p>
+            <p class="text-xl font-bold text-pink-500">Your [Your Name Here]</p>
+            <!-- Optional: You can add a small image or more personalized text here -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const wishButton = document.getElementById('wishButton');
+            const initialScreen = document.getElementById('initial-screen');
+            const birthdayMessageScreen = document.getElementById('birthday-message-screen');
+
+            const fireworksCanvas = document.getElementById('fireworksCanvas');
+            const fireworksCtx = fireworksCanvas.getContext('2d');
+
+            const confettiCanvas = document.getElementById('confettiCanvas');
+            const confettiCtx = confettiCanvas.getContext('2d');
+
+
+            let W, H;
+            let particles = []; // For fireworks
+            let confetti = [];  // For confetti
+            const MAX_CONFETTI = 200;
+            const colors = ['#f6d365', '#fda085', '#ee9ca7', '#ffdde1', '#a1c4fd', '#c2e9fb', '#fbc2eb', '#a6c1ee', '#8ddad3', '#c6ffdd'];
+
+            // Function to resize both canvases
+            function resizeCanvases() {
+                W = window.innerWidth;
+                H = window.innerHeight;
+                fireworksCanvas.width = W;
+                fireworksCanvas.height = H;
+                confettiCanvas.width = W;
+                confettiCanvas.height = H;
+            }
+            window.addEventListener('resize', resizeCanvases);
+            resizeCanvases(); // Initial resize
+
+            // Helper function to get random color
+            function getRandomColor() {
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            // --- Firework Particle Class (draws on fireworksCtx) ---
+            class FireworkParticle {
+                constructor(x, y, color, isExplosion = false, parent = null) {
+                    this.x = x;
+                    this.y = y;
+                    this.color = color;
+                    this.isExplosion = isExplosion;
+                    this.parent = parent;
+
+                    if (this.isExplosion) {
+                        this.angle = Math.random() * Math.PI * 2;
+                        this.speed = Math.random() * 8 + 1;
+                        this.velocity = {
+                            x: Math.cos(this.angle) * this.speed,
+                            y: Math.sin(this.angle) * this.speed
+                        };
+                        this.friction = 0.95;
+                        this.gravity = 0.5;
+                        this.alpha = 1;
+                        this.decay = Math.random() * 0.03 + 0.01;
+                    } else {
+                        this.speed = H * 0.008 + Math.random() * H * 0.002;
+                        this.velocity = { x: 0, y: -this.speed };
+                        this.gravity = 0.05;
+                        this.alpha = 1;
+                        this.trailLength = 10;
+                        this.trail = [];
+                    }
+                    this.size = isExplosion ? Math.random() * 3 + 1 : 4;
+                }
+
+                update() {
+                    if (this.isExplosion) {
+                        this.velocity.x *= this.friction;
+                        this.velocity.y *= this.friction;
+                        this.velocity.y += this.gravity;
+                        this.x += this.velocity.x;
+                        this.y += this.velocity.y;
+                        this.alpha -= this.decay;
+                    } else {
+                        this.trail.push({ x: this.x, y: this.y, alpha: this.alpha });
+                        if (this.trail.length > this.trailLength) {
+                            this.trail.shift();
+                        }
+                        this.velocity.y += this.gravity;
+                        this.y += this.velocity.y;
+                    }
+                }
+
+                draw() {
+                    fireworksCtx.save();
+                    fireworksCtx.globalAlpha = this.alpha;
+                    fireworksCtx.fillStyle = this.color;
+
+                    if (this.isExplosion) {
+                        fireworksCtx.beginPath();
+                        fireworksCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                        fireworksCtx.fill();
+                    } else {
+                        fireworksCtx.beginPath();
+                        fireworksCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                        fireworksCtx.fill();
+
+                        fireworksCtx.beginPath();
+                        fireworksCtx.moveTo(this.x, this.y);
+                        for (let i = this.trail.length - 1; i >= 0; i--) {
+                            const p = this.trail[i];
+                            const trailAlpha = (i / this.trail.length) * 0.5;
+                            fireworksCtx.globalAlpha = trailAlpha;
+                            fireworksCtx.lineTo(p.x, p.y);
+                        }
+                        fireworksCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                        fireworksCtx.lineWidth = 1.5;
+                        fireworksCtx.stroke();
+                    }
+                    fireworksCtx.restore();
+                }
+            }
+
+            // --- Confetti Particle Class (draws on confettiCtx) ---
+            class ConfettiParticle {
+                constructor(x, y, color) {
+                    this.x = x;
+                    this.y = y;
+                    this.color = color;
+                    this.size = Math.random() * 8 + 4;
+                    this.velocity = {
+                        x: Math.random() * 4 - 2,
+                        y: Math.random() * 3 + 1
+                    };
+                    this.alpha = 1;
+                    this.gravity = 0.08;
+                    this.rotation = Math.random() * 360;
+                    this.rotationSpeed = Math.random() * 10 - 5;
+                    this.wobble = Math.random() * Math.PI / 2;
+                    this.wobbleSpeed = Math.random() * 0.05 + 0.02;
+                    this.shape = Math.floor(Math.random() * 3);
+                }
+
+                update() {
+                    this.velocity.y += this.gravity;
+                    this.x += this.velocity.x + Math.sin(this.wobble) * 0.5;
+                    this.y += this.velocity.y;
+                    this.rotation += this.rotationSpeed;
+                    this.wobble += this.wobbleSpeed;
+                    this.alpha -= 0.003;
+                }
+
+                draw() {
+                    confettiCtx.save();
+                    confettiCtx.translate(this.x, this.y);
+                    confettiCtx.rotate(this.rotation * Math.PI / 180);
+                    confettiCtx.globalAlpha = Math.max(0, this.alpha);
+                    confettiCtx.fillStyle = this.color;
+
+                    if (this.shape === 0) { // Square
+                        confettiCtx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                    } else if (this.shape === 1) { // Circle
+                        confettiCtx.beginPath();
+                        confettiCtx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+                        confettiCtx.fill();
+                    } else { // Triangle
+                        confettiCtx.beginPath();
+                        confettiCtx.moveTo(0, -this.size / 2);
+                        confettiCtx.lineTo(this.size / 2, this.size / 2);
+                        confettiCtx.lineTo(-this.size / 2, this.size / 2);
+                        confettiCtx.closePath();
+                        confettiCtx.fill();
+                    }
+                    confettiCtx.restore();
+                }
+            }
+
+
+            // --- Fireworks Logic ---
+            let hue = 0;
+            function createFirework() {
+                const startX = Math.random() * W;
+                const startY = H;
+                hue = (hue + 10) % 360;
+                const color = `hsl(${hue}, 100%, 50%)`;
+                particles.push(new FireworkParticle(startX, startY, color));
+            }
+
+            function explodeFirework(firework) {
+                const numParticles = Math.random() * 60 + 80;
+                for (let i = 0; i < numParticles; i++) {
+                    particles.push(new FireworkParticle(firework.x, firework.y, firework.color, true, firework));
+                }
+            }
+
+            // --- Confetti Logic ---
+            let confettiInterval;
+            function startConfettiDrop() {
+                // Initial burst of confetti
+                for (let i = 0; i < 75; i++) {
+                    confetti.push(new ConfettiParticle(Math.random() * W, -Math.random() * H, getRandomColor()));
+                }
+
+                // Continuous confetti
+                confettiInterval = setInterval(() => {
+                    if (confetti.length < MAX_CONFETTI) {
+                        confetti.push(new ConfettiParticle(Math.random() * W, -50, getRandomColor()));
+                    }
+                }, 75);
+            }
+
+            // --- Animation Loop ---
+            function animate() {
+                // Clear fireworks canvas with a slight fade for trails
+                fireworksCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                fireworksCtx.fillRect(0, 0, W, H);
+
+                // Clear confetti canvas completely (confetti fades on its own)
+                confettiCtx.clearRect(0, 0, W, H);
+
+
+                // Update and draw fireworks
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.update();
+                    p.draw(); // Draws on fireworksCtx
+
+                    if (!p.isExplosion) {
+                        if (p.velocity.y >= 0) {
+                            explodeFirework(p);
+                            particles.splice(i, 1);
+                        }
+                    } else {
+                        if (p.alpha <= 0.1) {
+                            particles.splice(i, 1);
+                        }
+                    }
+                }
+
+                // Update and draw confetti
+                for (let i = confetti.length - 1; i >= 0; i--) {
+                    const c = confetti[i];
+                    c.update();
+                    c.draw(); // Draws on confettiCtx
+
+                    if (c.y > H + c.size || c.alpha <= 0) {
+                        confetti.splice(i, 1);
+                    }
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            // --- Event Listener ---
+            wishButton.addEventListener('click', () => {
+                initialScreen.style.opacity = '0';
+                setTimeout(() => {
+                    initialScreen.classList.add('hidden');
+                    initialScreen.style.display = 'none';
+
+                    birthdayMessageScreen.classList.remove('hidden');
+                    birthdayMessageScreen.style.display = 'flex';
+
+                    // Start fireworks and confetti
+                    setInterval(createFirework, 1200);
+                    startConfettiDrop();
+                    animate(); // Start the animation loop
+                }, 1000);
+            });
+
+        });
+    </script>
+</body>
+</html>
