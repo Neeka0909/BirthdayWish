@@ -21,7 +21,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 5; /* Behind all content */
+            opacity: 1;
+            background: transparent;
+            z-index: 20; /* Behind all content */
         }
 
         /* Full-screen canvas for confetti - placed above everything */
@@ -53,15 +55,16 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            /* Updated background to a beautiful dark gradient */
-            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
+            /* Updated background to a beautiful dark gradient 
+            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);*/
             transition: opacity 1s ease-in-out;
             position: relative;
-            z-index: 15; /* Message screen itself is above fireworks canvas */
+            z-index: 25; /* Message screen itself is above fireworks canvas */
         }
 
         /* Message box styling */
         .message-box {
+            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
             background-color: rgba(255, 255, 255, 0.95); /* Slightly less transparent */
             padding: 2.5rem;
             border-radius: 2rem;
@@ -109,7 +112,7 @@
 
         .message-box h1 {
             font-size: 4rem;
-            color: #ff6f61; /* Vibrant color */
+            color: #ec9a92; /* Vibrant color */
             margin-bottom: 1rem;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
             font-weight: 700;
@@ -120,7 +123,7 @@
 
         .message-box p {
             font-size: 1.5rem;
-            color: #333;
+            color: #ffffff;
             line-height: 1.6;
             opacity: 0; /* Hidden initially for animation */
             transform: translateY(20px);
@@ -183,6 +186,24 @@
             height: 300%;
         }
 
+        /* SVG Cake Container Styling */
+        #cake-container {
+            display: hidd;
+            position: fixed;
+            bottom: -50px; /* Start slightly off-screen */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px; /* Adjust size as needed */
+            height: 250px; /* Adjust size as needed */
+            z-index: 5; /* Between fireworks (-1) and message box (10) */
+            opacity: 0; /* Hidden initially */
+            transition: all 1s ease-out; /* Smooth slide-in transition */
+        }
+
+        #birthday-message-screen.visible #cake-container {
+            bottom: 0px; /* Slide into view */
+            opacity: 1;
+        }
 
         @media (max-width: 768px) {
             .magic-button {
@@ -198,10 +219,18 @@
             .message-box {
                 padding: 1.5rem;
             }
+            #cake-container {
+                width: 180px; /* Smaller cake on mobile */
+                height: 180px;
+                bottom: -30px; /* Adjust for smaller cake */
+            }
         }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+    <!-- Audio for background music -->
+    <audio id="backgroundMusic" src="bg-music.mp3" autoplay loop></audio>
 
     <!-- Canvas for fireworks (behind everything) -->
     <canvas id="fireworksCanvas"></canvas>
@@ -225,6 +254,8 @@
             <p class="text-xl font-bold text-pink-500">Your [Your Name Here]</p>
             <!-- Optional: You can add a small image or more personalized text here -->
         </div>
+
+
     </div>
 
     <script>
@@ -232,6 +263,7 @@
             const wishButton = document.getElementById('wishButton');
             const initialScreen = document.getElementById('initial-screen');
             const birthdayMessageScreen = document.getElementById('birthday-message-screen');
+            const backgroundMusic = document.getElementById('backgroundMusic'); // Get the audio element
 
             const fireworksCanvas = document.getElementById('fireworksCanvas');
             const fireworksCtx = fireworksCanvas.getContext('2d');
@@ -243,6 +275,7 @@
             let W, H;
             let particles = []; // For fireworks
             let confetti = [];  // For confetti
+
             const MAX_CONFETTI = 200;
             // Combined colors for confetti, including flower-like tones
             const colors = [
@@ -516,6 +549,14 @@
 
                     birthdayMessageScreen.classList.remove('hidden');
                     birthdayMessageScreen.style.display = 'flex';
+                    // Add a class to trigger cake slide-in
+                    birthdayMessageScreen.classList.add('visible');
+
+                    // Attempt to play music
+                    backgroundMusic.play().catch(error => {
+                        console.log("Autoplay prevented:", error);
+                        // Optionally, you could show a play button here if autoplay fails
+                    });
 
                     // Start fireworks and confetti
                     setInterval(createFirework, 1200);
